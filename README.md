@@ -2,8 +2,6 @@
 
 A native Go statusline for [Claude Code](https://claude.com/claude-code) — zero runtime dependencies, pluggable themes, pluggable segments, configurable via flags or environment variables.
 
-Replaces the JS/bun based statusline that used to ship at `~/.claude/statusline-worktree.js`.
-
 ## Design goals
 
 - **No runtime dependency.** A single self-contained binary; no node, no bun, no python.
