@@ -71,15 +71,17 @@ Running with no stdin (`~/.claude/claude-statusline < /dev/null`) is safe — ev
 
 Priority: **flag → environment variable → built-in default**.
 
-| Flag                | Environment variable          | Default           | Purpose                                              |
-|---------------------|-------------------------------|-------------------|------------------------------------------------------|
-| `--theme NAME`      | `CLAUDE_STATUSLINE_THEME`     | `atom-one-dark`   | Pick a registered theme                              |
-| `--segments LIST`   | `CLAUDE_STATUSLINE_SEGMENTS`  | `git,path,meta`   | Comma-separated segments in render order             |
-| `--list-themes`     | —                             | —                 | Print registered themes and exit                     |
-| `--list-segments`   | —                             | —                 | Print registered segments and exit                   |
-| `-h`, `--help`      | —                             | —                 | Print usage and exit (provided by Go's `flag` package) |
+| Flag                | Environment variable             | Default           | Purpose                                              |
+|---------------------|----------------------------------|-------------------|------------------------------------------------------|
+| `--theme NAME`      | `CLAUDE_STATUSLINE_THEME`        | `atom-one-dark`   | Pick a registered theme                              |
+| `--segments LIST`   | `CLAUDE_STATUSLINE_SEGMENTS`     | `git,path,meta`   | Comma-separated segments in render order             |
+| `--icon-font NAME`  | `CLAUDE_STATUSLINE_ICON_FONT`    | `plain`           | Pick a registered icon set                           |
+| `--list-themes`     | —                                | —                 | Print registered themes and exit                     |
+| `--list-segments`   | —                                | —                 | Print registered segments and exit                   |
+| `--list-icon-fonts` | —                                | —                 | Print registered icon sets and exit                  |
+| `-h`, `--help`      | —                                | —                 | Print usage and exit (provided by Go's `flag` package) |
 
-Unknown theme → warning to stderr, fall back to the default. Unknown segment → warning to stderr, skip it. Errors **never** go to stdout — they would corrupt the statusline.
+Unknown theme / icon set → warning to stderr, fall back to the default. Unknown segment → warning to stderr, skip it. Errors **never** go to stdout — they would corrupt the statusline.
 
 ### Examples
 
@@ -93,8 +95,12 @@ export CLAUDE_STATUSLINE_THEME=dracula
 # Show only path and model — drop the git row
 ~/.claude/claude-statusline --segments path,meta
 
-# In settings.json: combine theme + segments
-"command": "~/.claude/claude-statusline --theme dracula --segments path,meta"
+# Switch icon set (requires a matching font installed in the terminal)
+~/.claude/claude-statusline --icon-font nerd
+~/.claude/claude-statusline --icon-font none   # text only, no glyphs
+
+# In settings.json: combine theme + segments + icons
+"command": "~/.claude/claude-statusline --theme dracula --segments path,meta --icon-font nerd"
 
 # Pipe a hand-crafted payload (useful while developing)
 echo '{"workspace":{"current_dir":"/Users/andrew"},"model":{"display_name":"Opus 4.7 (1M context)","id":"claude-opus-4-7[1m]"},"context_window":{"used_percentage":42.7}}' \
@@ -112,9 +118,19 @@ echo '{"workspace":{"current_dir":"/Users/andrew"},"model":{"display_name":"Opus
 
 | Name   | What it shows                                                                                               |
 |--------|-------------------------------------------------------------------------------------------------------------|
-| `git`  | Current branch with `⇟` for worktrees and `↑N` / `↓N` ahead/behind vs upstream. Skipped outside a repo.     |
+| `git`  | Current branch with a worktree marker and `↑N` / `↓N` ahead/behind vs upstream. Skipped outside a repo.     |
 | `path` | Current working directory with `$HOME` collapsed to `~`. Always renders.                                    |
 | `meta` | Model family + version (e.g. `Opus 4.7`) and a context-usage percentage chip with colour-coded thresholds.  |
+
+## Bundled icon sets
+
+The icon set decides which glyph each segment uses for its prefix and markers. Pick one whose glyphs your terminal font can actually render — that's why `plain` is the default.
+
+| Name    | Requires       | Notes                                                                              |
+|---------|----------------|------------------------------------------------------------------------------------|
+| `plain` | nothing        | **Default.** Branch `⎇`, folder `📁`, model `🧊`, plus `⇟ ↑ ↓` markers. Universal Unicode — works with any modern terminal font. |
+| `nerd`  | a Nerd Font    | Uses Private Use Area glyphs from [Nerd Fonts](https://www.nerdfonts.com) (`nf-dev-git_branch`, `nf-fa-folder`, `nf-fa-cube`, `nf-oct-file_submodule`, `nf-fa-arrow_up/down`). Renders as tofu without a Nerd Font. |
+| `none`  | nothing        | All glyphs empty — text-only output. Useful for minimalist setups or terminals with poor emoji rendering. |
 
 ## Extending
 
@@ -146,6 +162,28 @@ func init() {
 
 That's it — `make build` and `./claude-statusline --theme solarized-dark` work immediately.
 
+### Add an icon set
+
+Create `icons/<name>.go`:
+
+```go
+package icons
+
+func init() {
+    Register(Set{
+        Name:     "powerline-extra",
+        Branch:   "", // your font's branch glyph
+        Folder:   "",
+        Model:    "",
+        Worktree: "",
+        Ahead:    "",
+        Behind:   "",
+    })
+}
+```
+
+Then enable it: `--icon-font powerline-extra`. Any field left empty renders as no icon — segments use `icons.Prefix` to drop the leading space when a glyph is missing, so partial sets work too. The set will appear in the list returned by `--list-icon-fonts`.
+
 ### Add a segment
 
 Create `statusline/<name>.go`:
@@ -156,6 +194,7 @@ package statusline
 import (
     "time"
 
+    "claude-statusline/icons"
     "claude-statusline/theme"
 )
 
@@ -163,14 +202,14 @@ func init() {
     Register(Segment{Name: "time", Render: renderTime})
 }
 
-func renderTime(in Input, p theme.Palette) (string, bool) {
+func renderTime(in Input, p theme.Palette, ic icons.Set) (string, bool) {
     return ChipOutline("⏱ "+time.Now().Format("15:04"), p.Cyan, p.Bg2), true
 }
 ```
 
 Then enable it: `--segments git,path,meta,time` (or via the env var). The segment will appear in the list returned by `--list-segments`.
 
-A segment that has no data should return `(_, false)` — the pipeline silently skips it.
+A segment that has no data should return `(_, false)` — the pipeline silently skips it. To prefix output with a configurable icon, call `icons.Prefix(ic.Foo, text)` — it omits the separator when the glyph is empty.
 
 ## Build targets
 
@@ -202,6 +241,11 @@ make install PREFIX="$HOME/bin"      # → ~/bin/claude-statusline
 │   ├── git.go            # git segment
 │   ├── path.go           # path segment
 │   └── meta.go           # model + context percentage segment
+├── icons/                # icon sets (glyph profiles)
+│   ├── icons.go          # Set type + Register / Get / List / Prefix
+│   ├── plain.go          # universal-Unicode set (default)
+│   ├── nerd.go           # Nerd Font PUA set
+│   └── none.go           # empty set — text only
 └── theme/                # palettes
     ├── theme.go          # Color / Palette types + Register / Get / List
     ├── atom_one_dark.go

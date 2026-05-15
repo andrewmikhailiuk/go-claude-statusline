@@ -5,22 +5,17 @@ import (
 	"strconv"
 	"strings"
 
+	"claude-statusline/icons"
 	"claude-statusline/theme"
 )
 
-const (
-	iconBranch     = "" // nf-dev-git_branch
-	markWorktree   = "⇟" // ⇟
-	markAhead      = "↑" // ↑
-	markBehind     = "↓" // ↓
-	worktreeSubdir = "/.git/worktrees/"
-)
+const worktreeSubdir = "/.git/worktrees/"
 
 func init() {
 	Register(Segment{Name: "git", Render: renderGit})
 }
 
-func renderGit(in Input, p theme.Palette) (string, bool) {
+func renderGit(in Input, p theme.Palette, ic icons.Set) (string, bool) {
 	cwd := in.Workspace.CurrentDir
 	if cwd == "" {
 		return "", false
@@ -37,8 +32,8 @@ func renderGit(in Input, p theme.Palette) (string, bool) {
 
 	text := branch
 	// Worktree marker: gitdir lives under the parent's /.git/worktrees/.
-	if gitDir := runIn(cwd, "git", "rev-parse", "--git-dir"); strings.Contains(gitDir, worktreeSubdir) {
-		text += " " + markWorktree
+	if gitDir := runIn(cwd, "git", "rev-parse", "--git-dir"); strings.Contains(gitDir, worktreeSubdir) && ic.Worktree != "" {
+		text += " " + ic.Worktree
 	}
 
 	// Ahead/behind vs upstream. Missing upstream makes git exit non-zero;
@@ -49,15 +44,15 @@ func renderGit(in Input, p theme.Palette) (string, bool) {
 			behind, _ := strconv.Atoi(parts[0])
 			ahead, _ := strconv.Atoi(parts[1])
 			if ahead > 0 {
-				text += " " + markAhead + strconv.Itoa(ahead)
+				text += " " + ic.Ahead + strconv.Itoa(ahead)
 			}
 			if behind > 0 {
-				text += " " + markBehind + strconv.Itoa(behind)
+				text += " " + ic.Behind + strconv.Itoa(behind)
 			}
 		}
 	}
 
-	return ChipOutline(iconBranch+" "+text, p.Green, p.Bg3), true
+	return ChipOutline(icons.Prefix(ic.Branch, text), p.Green, p.Bg3), true
 }
 
 // runIn executes name with args in the given working directory, discarding

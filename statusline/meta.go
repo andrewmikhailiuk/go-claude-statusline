@@ -5,10 +5,9 @@ import (
 	"regexp"
 	"strings"
 
+	"claude-statusline/icons"
 	"claude-statusline/theme"
 )
-
-const iconModel = "" // nf-fa-cube
 
 func init() {
 	Register(Segment{Name: "meta", Render: renderMeta})
@@ -47,11 +46,11 @@ func parseModel(displayName, id string) string {
 	return label
 }
 
-func renderMeta(in Input, p theme.Palette) (string, bool) {
+func renderMeta(in Input, p theme.Palette, ic icons.Set) (string, bool) {
 	var parts []string
 
 	if m := parseModel(in.Model.DisplayName, in.Model.ID); m != "" {
-		parts = append(parts, ChipOutline(iconModel+" "+m, p.Yellow, p.Bg2))
+		parts = append(parts, ChipOutline(icons.Prefix(ic.Model, m), p.Yellow, p.Bg2))
 	}
 
 	if in.ContextWindow != nil {

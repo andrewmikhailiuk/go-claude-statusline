@@ -3,6 +3,7 @@ package statusline
 import (
 	"sort"
 
+	"claude-statusline/icons"
 	"claude-statusline/theme"
 )
 
@@ -13,7 +14,7 @@ import (
 // use it when there's no data (e.g. cwd is not a git repo, model is missing).
 type Segment struct {
 	Name   string
-	Render func(in Input, p theme.Palette) (line string, ok bool)
+	Render func(in Input, p theme.Palette, ic icons.Set) (line string, ok bool)
 }
 
 var registry = map[string]Segment{}
