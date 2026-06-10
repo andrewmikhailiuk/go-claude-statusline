@@ -13,16 +13,16 @@ func init() {
 	Register(Segment{Name: "meta", Render: renderMeta})
 }
 
-// modelVerRe captures the major/minor version digits from a model id like
-// "claude-opus-4-7[1m]" → ["4", "7"].
-var modelVerRe = regexp.MustCompile(`(?i)(?:opus|sonnet|haiku)[_-](\d+)[_-](\d+)`)
+// modelVerRe captures the major and optional minor version digits from a
+// model id like "claude-opus-4-7[1m]" → ["4", "7"] or "claude-fable-5" → ["5", ""].
+var modelVerRe = regexp.MustCompile(`(?i)(?:opus|sonnet|haiku|fable)[_-](\d+)(?:[_-](\d+))?`)
 
 // parseModel resolves a human-friendly "Family Major.Minor" label from
 // Claude Code's display_name and id fields. Returns "" when neither yields
 // a recognisable family — caller should drop the chip in that case.
 func parseModel(displayName, id string) string {
 	var label string
-	for _, fam := range []string{"Opus", "Sonnet", "Haiku"} {
+	for _, fam := range []string{"Fable", "Opus", "Sonnet", "Haiku"} {
 		if strings.Contains(displayName, fam) {
 			label = fam
 			break
@@ -30,7 +30,7 @@ func parseModel(displayName, id string) string {
 	}
 	if label == "" {
 		lower := strings.ToLower(id)
-		for _, fam := range []string{"opus", "sonnet", "haiku"} {
+		for _, fam := range []string{"fable", "opus", "sonnet", "haiku"} {
 			if strings.Contains(lower, fam) {
 				label = strings.ToUpper(fam[:1]) + fam[1:]
 				break
@@ -41,6 +41,9 @@ func parseModel(displayName, id string) string {
 		return ""
 	}
 	if m := modelVerRe.FindStringSubmatch(id); len(m) == 3 {
+		if m[2] == "" {
+			return fmt.Sprintf("%s %s", label, m[1])
+		}
 		return fmt.Sprintf("%s %s.%s", label, m[1], m[2])
 	}
 	return label
