@@ -46,6 +46,26 @@ Then wire it into Claude Code by editing `~/.claude/settings.json`:
 
 No arguments — everything is configured through `claude-statusline config`. Restart Claude Code (or just open a new session) and the new statusline takes effect on the next render.
 
+### Make the command global
+
+Claude Code calls the binary by the path in `settings.json`, so `~/.claude` never has to be on your `PATH` — but `claude-statusline config` is easier to reach when it is. Symlink the installed binary into a directory that already is:
+
+```sh
+ln -sfn ~/.claude/claude-statusline ~/.local/bin/claude-statusline   # or /usr/local/bin
+claude-statusline config
+```
+
+One copy of the binary, two names for it: every later `make install` overwrites `~/.claude/claude-statusline` and the symlink follows. Remove it with `rm ~/.local/bin/claude-statusline`.
+
+Alternatives, if a symlink is not to your taste:
+
+```sh
+make install PREFIX="$HOME/.local/bin"   # a second copy on PATH — remember to install to both
+export PATH="$HOME/.claude:$PATH"        # in ~/.zshrc, if you want ~/.claude itself on PATH
+```
+
+Without any of this, run it by path: `~/.claude/claude-statusline config`.
+
 ## Commands
 
 | Command                    | What it does                                                        |
