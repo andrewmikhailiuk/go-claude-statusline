@@ -12,7 +12,7 @@ import (
 const worktreeSubdir = "/.git/worktrees/"
 
 func init() {
-	Register(Segment{Name: "git", Render: renderGit})
+	Register(Segment{Name: "git", Order: 10, Render: renderGit})
 }
 
 func renderGit(in Input, p theme.Palette, ic icons.Set) (string, bool) {
