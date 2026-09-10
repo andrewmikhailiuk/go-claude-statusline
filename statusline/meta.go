@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	Register(Segment{Name: "meta", Render: renderMeta})
+	Register(Segment{Name: "meta", Order: 30, Render: renderMeta})
 }
 
 // modelVerRe captures the major and optional minor version digits from a

@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	Register(Segment{Name: "path", Render: renderPath})
+	Register(Segment{Name: "path", Order: 20, Render: renderPath})
 }
 
 func renderPath(in Input, p theme.Palette, ic icons.Set) (string, bool) {
